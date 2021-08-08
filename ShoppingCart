@@ -1,0 +1,76 @@
+var col = db.getSisterDB("shop").products;
+col.insert({
+  , _id: "111445GB3"
+  , name: "Simsong Mobile"
+  , description: "Awesome new 70G Phone"
+  , quantity: 99
+  , price: 1000
+});
+var quantity = 1;
+var userId = 1;
+var productId = "111445GB3";
+
+var col = db.getSisterDB("shop").carts;
+col.update(
+    { _id: userId, status: 'active' }
+  , {
+      $set: { modified_on: new Date() }
+    , $push: { products: {
+        _id: productId
+      , quantity: quantity
+      , name: "Simsong Mobile"
+      , price: 1000
+    }}
+  }, true);
+  var quantity = 1;
+var col = db.getSisterDB("shop").products;
+col.update({
+    _id: productId
+  , quantity: { $gte: quantity }
+}, {
+    $inc: { quantity: -quantity }
+  , $push: {
+    reserved: {
+      quantity: quantity, _id: userId, created_on: new Date()
+    }
+  }
+});
+var col = db.getSisterDB("shop").carts;
+var cart = db.findOne({
+    _id: userId
+  , "products._id": productId
+  , status: "active"});
+var oldQuantity = 0;
+
+for(var i = 0; i < cart.products.length; i++) {
+  if(cart.products[i]._id == productId) {
+    oldQuantity = cart.products[i].quantity;
+  }
+}
+
+var newQuantity = 2;
+var delta = newQuantity - oldQuantity;
+
+col.update({
+    _id: userId
+  , "products._id": productId
+  , status: "active"
+}, {
+  $set: {
+      modified_on: new Date()
+    , "products.$.quantity": newQuantity
+  }
+});
+var col = db.getSisterDB("shop").products;
+col.update({
+    _id: productId
+  , "reserved._id": userId
+  , quantity: {
+    $gte: delta
+  }
+}, {
+  , $inc: { quantity: -delta }
+    $set: {
+      "reserved.$.quantity": newQuantity, modified_on: new Date()
+    }
+})
